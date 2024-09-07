@@ -1,5 +1,4 @@
-"use client";
-
+'use client';
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Image from 'next/image';
@@ -11,21 +10,29 @@ interface Movie {
   backdrop_paths: string[]; // Array for multiple screenshots
 }
 
+interface MovieResponse {
+  results: {
+    id: number;
+    title: string;
+    poster_path: string;
+  }[];
+}
+
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
 
 // Function to fetch movies starting from 1980
 const fetchMovies = async (): Promise<Movie[]> => {
-  const years = [...Array(2023 - 1980 + 1).keys()].map((i) => i + 1980); // Array of years from 1980 to 2023
+  const years = Array.from({ length: 2023 - 1980 + 1 }, (_, i) => 1980 + i); // Array of years from 1980 to 2023
   let allMovies: Movie[] = [];
 
   // Fetch movies for each year
   for (const year of years) {
-    const response = await axios.get(
+    const response = await axios.get<MovieResponse>(
       `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&language=en-US&sort_by=popularity.desc&year=${year}`
     );
 
     const movies = await Promise.all(
-      response.data.results.map(async (movie: { id: number; title: string; poster_path: string }) => {
+      response.data.results.map(async (movie) => {
         const backdrops = await fetchMovieImages(movie.id); // Fetch screenshots for each movie
         return {
           id: movie.id,
@@ -45,15 +52,15 @@ const fetchMovies = async (): Promise<Movie[]> => {
 // Function to fetch images (screenshots) of a movie
 const fetchMovieImages = async (movieId: number): Promise<string[]> => {
   try {
-    const response = await axios.get(
+    const response = await axios.get<{ backdrops: { iso_639_1: string | null; file_path: string }[] }>(
       `https://api.themoviedb.org/3/movie/${movieId}/images?api_key=${API_KEY}`
     );
 
     // Filter screenshots where iso_639_1 === null (no language field)
     const backdrops = response.data.backdrops
-      .filter((backdrop: { iso_639_1: string | null }) => backdrop.iso_639_1 === null)
+      .filter((backdrop) => backdrop.iso_639_1 === null)
       .slice(0, 3) // Limit to 3 images
-      .map((backdrop: { file_path: string }) => `https://image.tmdb.org/t/p/w780${backdrop.file_path}`);
+      .map((backdrop) => `https://image.tmdb.org/t/p/w780${backdrop.file_path}`);
 
     return backdrops;
   } catch (error) {
@@ -83,7 +90,7 @@ export default function Quiz() {
     const randomMovie = availableMovies[Math.floor(Math.random() * availableMovies.length)];
 
     setCurrentMovie(randomMovie);
-    setMovies(prevMovies => prevMovies.filter((movie) => movie.id !== randomMovie.id)); // Remove current movie from list
+    setMovies((prevMovies) => prevMovies.filter((movie) => movie.id !== randomMovie.id)); // Remove current movie from list
 
     const randomOptions: Movie[] = [randomMovie];
     while (randomOptions.length < 4) {
@@ -181,7 +188,7 @@ export default function Quiz() {
               <button
                 key={option.id}
                 onClick={() => handleAnswerClick(option)}
-                className="bg-gradient-to-r from-gray-900 to-black text-white py-3 px-6 w-full text-center rounded-3xl hover:bg-gray-800 transition-all duration-300 text-lg shadow-xl filter sm:hover:blur-none sm:pointer-events-auto blur-none pointer-events-auto"
+                className="bg-gradient-to-r from-gray-900 to-black text-white py-3 px-6 w-full text-center rounded-3xl hover:bg-gray-800 transition-all duration-300 text-lg shadow-xl"
               >
                 {option.title}
               </button>
