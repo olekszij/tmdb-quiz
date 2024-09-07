@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Image from 'next/image';
 
@@ -25,7 +25,7 @@ const fetchMovies = async (): Promise<Movie[]> => {
     );
 
     const movies = await Promise.all(
-      response.data.results.map(async (movie: any) => {
+      response.data.results.map(async (movie: { id: number; title: string; poster_path: string }) => {
         const backdrops = await fetchMovieImages(movie.id); // Fetch screenshots for each movie
         return {
           id: movie.id,
@@ -51,9 +51,9 @@ const fetchMovieImages = async (movieId: number): Promise<string[]> => {
 
     // Filter screenshots where iso_639_1 === null (no language field)
     const backdrops = response.data.backdrops
-      .filter((backdrop: any) => backdrop.iso_639_1 === null)
+      .filter((backdrop: { iso_639_1: string | null }) => backdrop.iso_639_1 === null)
       .slice(0, 3) // Limit to 3 images
-      .map((backdrop: any) => `https://image.tmdb.org/t/p/w780${backdrop.file_path}`);
+      .map((backdrop: { file_path: string }) => `https://image.tmdb.org/t/p/w780${backdrop.file_path}`);
 
     return backdrops;
   } catch (error) {
@@ -71,23 +71,8 @@ export default function Quiz() {
   const [showModal, setShowModal] = useState<boolean>(false); // Show modal
   const [error, setError] = useState<string | null>(null); // Error handling
 
-  useEffect(() => {
-    const loadMovies = async () => {
-      try {
-        setLoading(true); // Show loading on first load
-        const movieData = await fetchMovies();
-        setMovies(movieData);
-        generateQuestion(movieData);
-        setLoading(false); // Hide loading
-      } catch (error) {
-        setError('Error loading movies.');
-        setLoading(false);
-      }
-    };
-    loadMovies();
-  }, []);
-
-  const generateQuestion = (movieData: Movie[]) => {
+  // Using useCallback to prevent unnecessary re-renders
+  const generateQuestion = useCallback((movieData: Movie[]) => {
     const availableMovies = movieData.filter((m) => m.backdrop_paths.length > 0);
 
     if (availableMovies.length < 4) {
@@ -109,7 +94,23 @@ export default function Quiz() {
     setOptions(shuffleArray(randomOptions));
     setMessage(''); // Reset message on new question
     setShowModal(false); // Close modal
-  };
+  }, []);
+
+  useEffect(() => {
+    const loadMovies = async () => {
+      try {
+        setLoading(true); // Show loading on first load
+        const movieData = await fetchMovies();
+        setMovies(movieData);
+        generateQuestion(movieData);
+        setLoading(false); // Hide loading
+      } catch (error) {
+        setError('Error loading movies.');
+        setLoading(false);
+      }
+    };
+    loadMovies();
+  }, [generateQuestion]);
 
   const shuffleArray = (array: Movie[]): Movie[] => {
     return array.sort(() => Math.random() - 0.5);
@@ -136,14 +137,12 @@ export default function Quiz() {
     }
   };
 
-
-
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-r from-gray-50 via-gray-200 to-gray-50">
       <Image
         src="/logo.png"
         alt="Logo"
-        width={64}  // Установи нужный размер
+        width={64}
         height={64}
         className="mb-4"
       />
@@ -186,10 +185,8 @@ export default function Quiz() {
               >
                 {option.title}
               </button>
-
             ))}
           </div>
-
         </>
       )}
 
@@ -217,9 +214,6 @@ export default function Quiz() {
           </div>
         </div>
       )}
-
-
-
     </div>
   );
 }
