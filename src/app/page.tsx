@@ -70,7 +70,6 @@ export default function Quiz() {
   const [message, setMessage] = useState<string>(''); // Correct/incorrect message
   const [showModal, setShowModal] = useState<boolean>(false); // Show modal
   const [error, setError] = useState<string | null>(null); // Error handling
-  const [viewFullScreen, setViewFullScreen] = useState<string | null>(null); // Fullscreen view
 
   useEffect(() => {
     const loadMovies = async () => {
@@ -137,19 +136,19 @@ export default function Quiz() {
     }
   };
 
-  // Function to display screenshot in fullscreen
-  const handleFullScreen = (path: string) => {
-    setViewFullScreen(`https://image.tmdb.org/t/p/w1280${path}`); // Higher quality for fullscreen
-  };
 
-  const closeFullScreen = () => {
-    setViewFullScreen(null);
-  };
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-r from-gray-50 via-gray-200 to-gray-50">
-      <h1 className="text-6xl font-extrabold mb-8 text-gray-900 text-center tracking-tight">
-        Guess the Movie by Screenshot
+      <Image
+        src="/logo.png"
+        alt="Logo"
+        width={64}  // Установи нужный размер
+        height={64}
+        className="mb-4"
+      />
+      <h1 className="text-3xl font-extrabold mb-8 text-gray-900 text-center tracking-tight">
+        Guess the Movie
       </h1>
 
       {/* Error loading */}
@@ -166,7 +165,6 @@ export default function Quiz() {
               <div
                 key={index}
                 className="overflow-hidden rounded-lg shadow-lg transform transition-transform hover:scale-105 duration-500 ease-in-out m-2"
-                onClick={() => handleFullScreen(path)} // Fullscreen handler
               >
                 <Image
                   src={path}
@@ -184,12 +182,14 @@ export default function Quiz() {
               <button
                 key={option.id}
                 onClick={() => handleAnswerClick(option)}
-                className="bg-gradient-to-r from-gray-900 to-black text-white py-3 px-6 w-full text-center rounded-3xl hover:bg-gray-800 transition-all duration-300 text-lg shadow-xl"
+                className="bg-gradient-to-r from-gray-900 to-black text-white py-3 px-6 w-full text-center rounded-3xl hover:bg-gray-800 transition-all duration-300 text-lg shadow-xl filter sm:hover:blur-none sm:pointer-events-auto blur-none pointer-events-auto"
               >
                 {option.title}
               </button>
+
             ))}
           </div>
+
         </>
       )}
 
@@ -218,12 +218,8 @@ export default function Quiz() {
         </div>
       )}
 
-      {/* Fullscreen view */}
-      {viewFullScreen && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center" onClick={closeFullScreen}>
-          <Image src={viewFullScreen} alt="Full Screen" width={1280} height={720} className="object-contain" />
-        </div>
-      )}
+
+
     </div>
   );
 }
