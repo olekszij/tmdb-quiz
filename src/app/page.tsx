@@ -7,7 +7,7 @@ interface Movie {
   id: number;
   title: string;
   poster_path: string;
-  backdrop_paths: string[]; // Array for multiple screenshots
+  backdrop_paths: string[];
 }
 
 interface MovieResponse {
@@ -20,46 +20,43 @@ interface MovieResponse {
 
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
 
-// Function to fetch movies starting from 1980
-const fetchMovies = async (): Promise<Movie[]> => {
-  const years = Array.from({ length: 2023 - 1980 + 1 }, (_, i) => 1980 + i); // Array of years from 1980 to 2023
-  let allMovies: Movie[] = [];
+const fetchRandomMovie = async (): Promise<Movie | null> => {
+  const randomYear = Math.floor(Math.random() * (2024 - 1980 + 1)) + 1980; // Случайный год в диапазоне 1980-2024
 
-  // Fetch movies for each year
-  for (const year of years) {
+  try {
     const response = await axios.get<MovieResponse>(
-      `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&language=en-US&sort_by=popularity.desc&year=${year}`
+      `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&language=en-US&sort_by=popularity.desc&year=${randomYear}`
     );
 
-    const movies = await Promise.all(
-      response.data.results.map(async (movie) => {
-        const backdrops = await fetchMovieImages(movie.id); // Fetch screenshots for each movie
-        return {
-          id: movie.id,
-          title: movie.title,
-          poster_path: movie.poster_path, // Adding poster
-          backdrop_paths: backdrops,
-        };
-      })
-    );
+    const movies = response.data.results;
+    if (movies.length === 0) return null;
 
-    allMovies = [...allMovies, ...movies];
+    const randomIndex = Math.floor(Math.random() * movies.length);
+    const selectedMovie = movies[randomIndex];
+
+    const backdrops = await fetchMovieImages(selectedMovie.id);
+
+    return {
+      id: selectedMovie.id,
+      title: selectedMovie.title,
+      poster_path: selectedMovie.poster_path,
+      backdrop_paths: backdrops,
+    };
+  } catch (error) {
+    console.error('Error fetching movie:', error);
+    return null;
   }
-
-  return allMovies;
 };
 
-// Function to fetch images (screenshots) of a movie
 const fetchMovieImages = async (movieId: number): Promise<string[]> => {
   try {
     const response = await axios.get<{ backdrops: { iso_639_1: string | null; file_path: string }[] }>(
       `https://api.themoviedb.org/3/movie/${movieId}/images?api_key=${API_KEY}`
     );
 
-    // Filter screenshots where iso_639_1 === null (no language field)
     const backdrops = response.data.backdrops
       .filter((backdrop) => backdrop.iso_639_1 === null)
-      .slice(0, 3) // Limit to 3 images
+      .slice(0, 3)
       .map((backdrop) => `https://image.tmdb.org/t/p/w780${backdrop.file_path}`);
 
     return backdrops;
@@ -70,53 +67,44 @@ const fetchMovieImages = async (movieId: number): Promise<string[]> => {
 };
 
 export default function Quiz() {
-  const [movies, setMovies] = useState<Movie[]>([]);
   const [currentMovie, setCurrentMovie] = useState<Movie | null>(null);
   const [options, setOptions] = useState<Movie[]>([]);
-  const [loading, setLoading] = useState<boolean>(false); // Loading state
-  const [message, setMessage] = useState<string>(''); // Correct/incorrect message
-  const [showModal, setShowModal] = useState<boolean>(false); // Show modal
-  const [error, setError] = useState<string | null>(null); // Error handling
+  const [loading, setLoading] = useState<boolean>(false);
+  const [message, setMessage] = useState<string>('');
+  const [rewardMessage, setRewardMessage] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [score, setScore] = useState<number>(0);
+  const [streak, setStreak] = useState<number>(0);
 
-  // Using useCallback to prevent unnecessary re-renders
-  const generateQuestion = useCallback((movieData: Movie[]) => {
-    const availableMovies = movieData.filter((m) => m.backdrop_paths.length > 0);
+  const generateQuestion = useCallback(async () => {
+    setLoading(true);
 
-    if (availableMovies.length < 4) {
-      setError('Not enough movies available for the game.');
+    const movie = await fetchRandomMovie();
+    if (!movie) {
+      setError('No movie found for the selected year.');
+      setLoading(false);
       return;
     }
 
-    const randomMovie = availableMovies[Math.floor(Math.random() * availableMovies.length)];
-
-    setCurrentMovie(randomMovie);
-    setMovies((prevMovies) => prevMovies.filter((movie) => movie.id !== randomMovie.id)); // Remove current movie from list
-
-    const randomOptions: Movie[] = [randomMovie];
+    const randomOptions: Movie[] = [movie];
     while (randomOptions.length < 4) {
-      const randomOption = availableMovies[Math.floor(Math.random() * availableMovies.length)];
-      if (!randomOptions.includes(randomOption)) randomOptions.push(randomOption);
+      const randomOption = await fetchRandomMovie();
+      if (randomOption && !randomOptions.find((opt) => opt.id === randomOption.id)) {
+        randomOptions.push(randomOption);
+      }
     }
 
+    setCurrentMovie(movie);
     setOptions(shuffleArray(randomOptions));
-    setMessage(''); // Reset message on new question
-    setShowModal(false); // Close modal
+    setLoading(false);
+    setMessage('');
+    setRewardMessage(null);
+    setShowModal(false);
   }, []);
 
   useEffect(() => {
-    const loadMovies = async () => {
-      try {
-        setLoading(true); // Show loading on first load
-        const movieData = await fetchMovies();
-        setMovies(movieData);
-        generateQuestion(movieData);
-        setLoading(false); // Hide loading
-      } catch (error) {
-        setError('Error loading movies.');
-        setLoading(false);
-      }
-    };
-    loadMovies();
+    generateQuestion();
   }, [generateQuestion]);
 
   const shuffleArray = (array: Movie[]): Movie[] => {
@@ -126,51 +114,45 @@ export default function Quiz() {
   const handleAnswerClick = (selectedMovie: Movie) => {
     if (selectedMovie.id === currentMovie?.id) {
       setMessage('Correct! 🎉');
-      setShowModal(true);
+      setScore((prevScore) => prevScore + 1);
+      setStreak((prevStreak) => prevStreak + 1);
 
-      if (movies.length > 0) {
-        setTimeout(() => {
-          generateQuestion(movies); // Move to next question after 2 seconds
-        }, 2000);
-      } else {
-        setError('Not enough movies for further questions.');
+      if (streak + 1 === 5) {
+        setRewardMessage("You've earned the 'Silver Cinematographer' badge for 5 correct answers in a row!");
+      } else if (streak + 1 === 10) {
+        setRewardMessage("You've earned the 'Gold Director' badge for 10 correct answers in a row!");
       }
+
+      setShowModal(true);
     } else {
       setMessage(`Incorrect! The movie was: ${currentMovie?.title}`);
+      setScore((prevScore) => prevScore - 3);
+      setStreak(0);
       setShowModal(true);
-      setTimeout(() => {
-        generateQuestion(movies); // Move to next question after 2 seconds
-      }, 2000);
     }
+  };
+
+  const handleModalClose = () => {
+    setShowModal(false);
+    generateQuestion();
   };
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-r from-gray-50 via-gray-200 to-gray-50">
-      <Image
-        src="/logo.png"
-        alt="Logo"
-        width={64}
-        height={64}
-        className="mb-4"
-      />
-      <h1 className="text-3xl font-extrabold mb-8 text-gray-900 text-center tracking-tight">
-        Guess the Movie
-      </h1>
+      <Image src="/logo.png" alt="Logo" width={64} height={64} className="mb-4" />
+      <h1 className="text-3xl font-extrabold mb-8 text-gray-900 text-center tracking-tight">Guess the Movie</h1>
 
-      {/* Error loading */}
       {error && <p className="text-red-500 text-2xl">{error}</p>}
 
-      {/* Loading status */}
       {loading && <p className="text-2xl font-semibold mt-4">Loading...</p>}
 
-      {/* Game */}
       {!loading && currentMovie && (
         <>
           <div className="flex flex-col gap-6 max-w-4xl mx-auto mb-12">
             {currentMovie.backdrop_paths.map((path, index) => (
               <div
                 key={index}
-                className="overflow-hidden rounded-lg shadow-lg transform transition-transform hover:scale-105 duration-500 ease-in-out m-2"
+                className="relative overflow-hidden rounded-lg shadow-lg transform md:hover:scale-150  hover:z-10 transition-transform duration-300 cursor-pointer mx-4"
               >
                 <Image
                   src={path}
@@ -188,7 +170,7 @@ export default function Quiz() {
               <button
                 key={option.id}
                 onClick={() => handleAnswerClick(option)}
-                className="bg-gradient-to-r from-gray-900 to-black text-white py-3 px-6 w-full text-center rounded-3xl hover:bg-gray-800 transition-all duration-300 text-lg shadow-xl"
+                className="bg-gradient-to-r from-gray-900 to-black text-white py-3 px-6 w-full text-center rounded-3xl hover:bg-gray-800 transition-all duration-300 text-lg shadow-xl md:mx-4"
               >
                 {option.title}
               </button>
@@ -197,25 +179,15 @@ export default function Quiz() {
         </>
       )}
 
-      {/* Modal */}
       {showModal && currentMovie && (
         <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-60 transition-opacity duration-300">
           <div className="bg-white p-8 rounded-lg shadow-xl text-center max-w-md">
             <h2 className="text-3xl font-bold mb-4">{message}</h2>
-            <Image
-              src={`https://image.tmdb.org/t/p/w500${currentMovie.poster_path}`} // Movie poster
-              alt={currentMovie.title}
-              width={300}
-              height={450}
-              className="mx-auto mb-4"
-            />
-            <button
-              onClick={() => setShowModal(false)}
-              className={`${message.includes('Correct')
-                ? 'bg-green-500'
-                : 'bg-red-500'
-                } text-white py-2 px-6 rounded-full hover:opacity-90 transition-opacity duration-300`}
-            >
+            <Image src={`https://image.tmdb.org/t/p/w500${currentMovie.poster_path}`} alt={currentMovie.title} width={300} height={450} className="mx-auto mb-4" />
+
+            {rewardMessage && <div className="bg-yellow-100 p-4 mb-4 rounded-lg text-yellow-900 text-lg">{rewardMessage}</div>}
+
+            <button onClick={handleModalClose} className={`${message.includes('Correct') ? 'bg-green-500' : 'bg-red-500'} text-white py-2 px-6 rounded-full hover:opacity-90 transition-opacity duration-300`}>
               {message.includes('Correct') ? 'Great!' : 'Try Again'}
             </button>
           </div>
