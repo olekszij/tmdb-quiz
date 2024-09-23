@@ -74,8 +74,7 @@ export default function Quiz() {
   const [rewardMessage, setRewardMessage] = useState<string | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [score, setScore] = useState<number>(0);
-  const [streak, setStreak] = useState<number>(0);
+
 
   const generateQuestion = useCallback(async () => {
     setLoading(true);
@@ -114,20 +113,9 @@ export default function Quiz() {
   const handleAnswerClick = (selectedMovie: Movie) => {
     if (selectedMovie.id === currentMovie?.id) {
       setMessage('Correct! 🎉');
-      setScore((prevScore) => prevScore + 1);
-      setStreak((prevStreak) => prevStreak + 1);
-
-      if (streak + 1 === 5) {
-        setRewardMessage("You've earned the 'Silver Cinematographer' badge for 5 correct answers in a row!");
-      } else if (streak + 1 === 10) {
-        setRewardMessage("You've earned the 'Gold Director' badge for 10 correct answers in a row!");
-      }
-
       setShowModal(true);
     } else {
       setMessage(`Incorrect! The movie was: ${currentMovie?.title}`);
-      setScore((prevScore) => prevScore - 3);
-      setStreak(0);
       setShowModal(true);
     }
   };
