@@ -10,3 +10,231 @@
 body {
   font-family: var(--font-geist-sans);
 }
+
+@keyframes modalOverlayIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modalOverlayOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modalPanelOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+}
+
+@keyframes introFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes introFadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes introFloatMain {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0) rotate(-1deg);
+  }
+
+  50% {
+    transform: translateX(-50%) translateY(-10px) rotate(1deg);
+  }
+}
+
+@keyframes introFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--intro-rotate, 0deg));
+  }
+
+  50% {
+    transform: translateY(-12px) rotate(calc(var(--intro-rotate, 0deg) * -1));
+  }
+}
+
+@keyframes introImageZoom {
+  from {
+    transform: scale(1.02) translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: scale(1.28) translate3d(-3%, -2%, 0);
+  }
+}
+
+@keyframes introFilmMove {
+  from {
+    background-position-x: 0;
+  }
+
+  to {
+    background-position-x: 56px;
+  }
+}
+
+@keyframes introFilmMoveReverse {
+  from {
+    background-position-x: 56px;
+  }
+
+  to {
+    background-position-x: 0;
+  }
+}
+
+@keyframes introButtonPulse {
+  0%,
+  100% {
+    box-shadow: 0 18px 45px rgba(251, 191, 36, 0.28);
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    box-shadow: 0 24px 70px rgba(251, 191, 36, 0.46);
+    transform: translateY(-3px) scale(1.035);
+  }
+}
+
+@keyframes introCardPulse {
+  0%,
+  100% {
+    filter: brightness(0.9) saturate(1);
+  }
+
+  50% {
+    filter: brightness(1.08) saturate(1.14);
+  }
+}
+
+.modal-overlay-in {
+  animation: modalOverlayIn 220ms ease-out both;
+}
+
+.modal-panel-in {
+  animation: modalPanelIn 280ms ease-out both;
+}
+
+.modal-overlay-out {
+  animation: modalOverlayOut 220ms ease-in both;
+}
+
+.modal-panel-out {
+  animation: modalPanelOut 220ms ease-in both;
+}
+
+.intro-fade-up {
+  animation: introFadeUp 720ms ease-out both;
+}
+
+.intro-fade-down {
+  animation: introFadeDown 640ms ease-out both;
+}
+
+.intro-main-card {
+  animation: introFadeUp 760ms ease-out 120ms both, introFloatMain 8s ease-in-out 1s infinite;
+}
+
+.intro-float-card {
+  animation: introFadeUp 760ms ease-out var(--intro-delay, 180ms) both, introFloat 7s ease-in-out calc(var(--intro-delay, 180ms) + 700ms) infinite;
+}
+
+.intro-image-zoom {
+  animation: introImageZoom 5s ease-in-out alternate infinite;
+}
+
+.intro-film-strip {
+  animation: introFilmMove 1.1s linear infinite;
+}
+
+.intro-film-strip-reverse {
+  animation: introFilmMoveReverse 1.1s linear infinite;
+}
+
+.intro-card-motion {
+  animation: introCardPulse 2.4s ease-in-out infinite;
+}
+
+.intro-main-card.intro-card-motion {
+  animation: introFadeUp 760ms ease-out 120ms both, introFloatMain 5s ease-in-out 1s infinite, introCardPulse 2.4s ease-in-out 1s infinite;
+}
+
+.intro-float-card.intro-card-motion {
+  animation: introFadeUp 760ms ease-out var(--intro-delay, 180ms) both, introFloat 4.5s ease-in-out calc(var(--intro-delay, 180ms) + 500ms) infinite, introCardPulse 2.4s ease-in-out calc(var(--intro-delay, 180ms) + 500ms) infinite;
+}
+
+.intro-button-motion {
+  animation: introFadeUp 720ms ease-out 560ms both, introButtonPulse 2s ease-in-out 1.2s infinite;
+}
+
+@media (min-width: 640px) {
+  .intro-main-card {
+    animation: introFadeUp 760ms ease-out 120ms both, introFloat 8s ease-in-out 1s infinite;
+  }
+
+  .intro-main-card.intro-card-motion {
+    animation: introFadeUp 760ms ease-out 120ms both, introFloat 5s ease-in-out 1s infinite, introCardPulse 2.4s ease-in-out 1s infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-fade-up,
+  .intro-fade-down,
+  .intro-main-card,
+  .intro-float-card,
+  .intro-image-zoom,
+  .intro-film-strip,
+  .intro-film-strip-reverse,
+  .intro-card-motion,
+  .intro-button-motion {
+    animation: none;
+  }
+}

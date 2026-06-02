@@ -11,7 +11,13 @@ const nextConfig = {
     API_KEY: process.env.API_KEY,  // Подключаем переменную API_KEY из .env
   },
   images: {
-    domains: ['image.tmdb.org'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'image.tmdb.org',
+        pathname: '/t/p/**',
+      },
+    ],
   },
 };
 
