@@ -237,13 +237,12 @@ export default function Quiz() {
   const [loading, setLoading] = useState<boolean>(false);
   const [hasStarted, setHasStarted] = useState<boolean>(false);
   const [message, setMessage] = useState<string>('');
+  const [answerFeedback, setAnswerFeedback] = useState<{ movieId: number; status: 'correct' | 'incorrect' } | null>(null);
   const [rewardMessage, setRewardMessage] = useState<string | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [showTrailerModal, setShowTrailerModal] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [hintStep, setHintStep] = useState<number>(0);
-  const [pendingHintStep, setPendingHintStep] = useState<number | null>(null);
-  const [isHintClosing, setIsHintClosing] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isNightTheme, setIsNightTheme] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
@@ -258,6 +257,7 @@ export default function Quiz() {
   const resultDetailsRef = useRef<HTMLDivElement | null>(null);
   const countdownIntervalRef = useRef<number | null>(null);
   const countdownTokenRef = useRef<number>(0);
+  const answerFeedbackTimeoutRef = useRef<number | null>(null);
 
 
   const generateQuestion = useCallback(async () => {
@@ -297,11 +297,11 @@ export default function Quiz() {
     setOptions(shuffleArray(randomOptions));
     setLoading(false);
     setMessage('');
+    setAnswerFeedback(null);
     setRewardMessage(null);
     setShowModal(false);
     setShowTrailerModal(false);
     setHintStep(0);
-    setPendingHintStep(null);
   }, []);
 
   useEffect(() => {
@@ -330,6 +330,15 @@ export default function Quiz() {
   }, []);
 
   useEffect(() => clearCountdownTimer, [clearCountdownTimer]);
+
+  const clearAnswerFeedbackTimer = useCallback(() => {
+    if (answerFeedbackTimeoutRef.current) {
+      window.clearTimeout(answerFeedbackTimeoutRef.current);
+      answerFeedbackTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearAnswerFeedbackTimer, [clearAnswerFeedbackTimer]);
 
   const startRoundWithCountdown = useCallback(() => {
     clearCountdownTimer();
@@ -373,19 +382,23 @@ export default function Quiz() {
     setCountdown(null);
     setShowModal(false);
     setShowTrailerModal(false);
-    setPendingHintStep(null);
-    setIsHintClosing(false);
     setMessage('');
+    setAnswerFeedback(null);
     setRewardMessage(null);
     setError(null);
   };
 
   const handleAnswerClick = (selectedMovie: MovieOption) => {
     if (!currentMovie) return;
+    clearAnswerFeedbackTimer();
 
     if (selectedMovie.id === currentMovie.id) {
       setMessage('Correct!');
-      setShowModal(true);
+      setAnswerFeedback({ movieId: selectedMovie.id, status: 'correct' });
+      answerFeedbackTimeoutRef.current = window.setTimeout(() => {
+        setShowModal(true);
+        answerFeedbackTimeoutRef.current = null;
+      }, 550);
     } else {
       const nextHintStep = hintStep + 1;
       const hasAnotherChance = hintStep < MAX_HINT_STEP && (
@@ -394,13 +407,21 @@ export default function Quiz() {
       );
 
       if (hasAnotherChance) {
-        setPendingHintStep(nextHintStep);
-        setMessage('Not quite. Try once more with a new hint.');
+        setHintStep(nextHintStep);
+        setAnswerFeedback({ movieId: selectedMovie.id, status: 'incorrect' });
+        answerFeedbackTimeoutRef.current = window.setTimeout(() => {
+          setAnswerFeedback(null);
+          answerFeedbackTimeoutRef.current = null;
+        }, 650);
         return;
       }
 
       setMessage(`Incorrect! The movie was: ${currentMovie?.title}`);
-      setShowModal(true);
+      setAnswerFeedback({ movieId: selectedMovie.id, status: 'incorrect' });
+      answerFeedbackTimeoutRef.current = window.setTimeout(() => {
+        setShowModal(true);
+        answerFeedbackTimeoutRef.current = null;
+      }, 550);
     }
   };
 
@@ -408,20 +429,6 @@ export default function Quiz() {
     setShowModal(false);
     setShowTrailerModal(false);
     startRoundWithCountdown();
-  };
-
-  const handleHintModalClose = () => {
-    setIsHintClosing(true);
-
-    window.setTimeout(() => {
-      if (pendingHintStep !== null) {
-        setHintStep(pendingHintStep);
-      }
-
-      setPendingHintStep(null);
-      setIsHintClosing(false);
-      setMessage('');
-    }, 220);
   };
 
   const handleDescriptionToggle = (event: React.ToggleEvent<HTMLDetailsElement>) => {
@@ -604,15 +611,26 @@ export default function Quiz() {
           )}
 
           <div className="grid w-full grid-cols-2 gap-2 px-3 pb-3 sm:max-w-3xl sm:gap-8 sm:px-0 sm:pb-0 sm:mb-8">
-            {options.map((option) => (
-              <button
-                key={option.id}
-                onClick={() => handleAnswerClick(option)}
-                className={`${isNightTheme ? 'bg-slate-800 text-white shadow-black/60 hover:bg-slate-700 hover:shadow-amber-950/40' : 'bg-white text-slate-950 shadow-slate-300/70 hover:bg-slate-50'} min-h-11 w-full rounded-xl px-3 py-2 text-center text-sm font-bold leading-tight shadow-lg transition-all duration-300 hover:-translate-y-0.5 sm:rounded-3xl sm:px-6 sm:py-3 sm:text-lg sm:shadow-xl md:mx-4`}
-              >
-                {option.title}
-              </button>
-            ))}
+            {options.map((option) => {
+              const feedbackStatus = answerFeedback?.movieId === option.id ? answerFeedback.status : null;
+              const feedbackClass = feedbackStatus === 'correct'
+                ? 'bg-emerald-500 text-white shadow-emerald-950/40'
+                : feedbackStatus === 'incorrect'
+                  ? 'bg-rose-500 text-white shadow-rose-950/40'
+                  : isNightTheme
+                    ? 'bg-slate-800 text-white shadow-black/60 hover:bg-slate-700 hover:shadow-amber-950/40'
+                    : 'bg-white text-slate-950 shadow-slate-300/70 hover:bg-slate-50';
+
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => handleAnswerClick(option)}
+                  className={`${feedbackClass} min-h-11 w-full rounded-xl px-3 py-2 text-center text-sm font-bold leading-tight shadow-lg transition-all duration-300 hover:-translate-y-0.5 sm:rounded-3xl sm:px-6 sm:py-3 sm:text-lg sm:shadow-xl md:mx-4`}
+                >
+                  {option.title}
+                </button>
+              );
+            })}
           </div>
 
           {visibleActor && (
@@ -631,20 +649,6 @@ export default function Quiz() {
             </div>
           )}
         </>
-      )}
-
-      {pendingHintStep !== null && (
-        <div className={`${isHintClosing ? 'modal-overlay-out' : 'modal-overlay-in'} fixed inset-0 z-40 flex items-center justify-center bg-black/45 p-4`}>
-          <div className={`${isHintClosing ? 'modal-panel-out' : 'modal-panel-in'} w-full max-w-sm rounded-2xl bg-slate-950 px-6 py-6 text-center shadow-2xl shadow-black/60`}>
-            <p className="mb-5 text-base leading-relaxed text-slate-100 sm:text-lg">Not quite. Try once more with a new hint.</p>
-            <button
-              onClick={handleHintModalClose}
-              className="min-h-11 rounded-full bg-amber-300 px-6 py-2 text-sm font-bold text-slate-950 shadow-lg shadow-amber-950/30 transition-all duration-300 hover:-translate-y-0.5 hover:bg-amber-200 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-amber-200/30"
-            >
-              Show new hint
-            </button>
-          </div>
-        </div>
       )}
 
       {showModal && currentMovie && (
