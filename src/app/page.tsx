@@ -67,14 +67,27 @@ interface MovieDetailsResponse {
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
 const MAX_HINT_STEP = 2;
 const RECENT_MOVIES_KEY = 'tmdb-quiz-recent-movies';
+const THEME_STORAGE_KEY = 'tmdb-quiz-theme';
 const RECENT_MOVIES_LIMIT = 40;
 const DISCOVER_PAGE_LIMIT = 25;
 const DISCOVER_ATTEMPTS = 5;
-const INTRO_IMAGES = [
-  'https://image.tmdb.org/t/p/w780/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg',
-  'https://image.tmdb.org/t/p/w780/hZkgoQYus5vegHoetLkCJzb17zJ.jpg',
-  'https://image.tmdb.org/t/p/w780/kXfqcdQKsToO0OUXHcrrNCHDBzO.jpg',
-  'https://image.tmdb.org/t/p/w780/8rpDcsfLJypbO6vREc0547VKqEv.jpg',
+const INTRO_POSTERS = [
+  '/posters/poster-01.webp',
+  '/posters/poster-02.webp',
+  '/posters/poster-03.webp',
+  '/posters/poster-04.webp',
+  '/posters/poster-05.webp',
+  '/posters/poster-06.webp',
+  '/posters/poster-07.webp',
+  '/posters/poster-08.webp',
+  '/posters/poster-09.webp',
+  '/posters/poster-10.webp',
+  '/posters/poster-11.webp',
+  '/posters/poster-12.webp',
+  '/posters/poster-13.webp',
+  '/posters/poster-14.webp',
+  '/posters/poster-15.webp',
+  '/posters/poster-16.webp',
 ];
 
 const getRecentMovieIds = (): number[] => {
@@ -232,6 +245,15 @@ export default function Quiz() {
   const [pendingHintStep, setPendingHintStep] = useState<number | null>(null);
   const [isHintClosing, setIsHintClosing] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [isNightTheme, setIsNightTheme] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+
+    try {
+      return window.localStorage.getItem(THEME_STORAGE_KEY) !== 'light';
+    } catch {
+      return true;
+    }
+  });
   const resultModalRef = useRef<HTMLDivElement | null>(null);
   const resultDetailsRef = useRef<HTMLDivElement | null>(null);
   const countdownIntervalRef = useRef<number | null>(null);
@@ -291,6 +313,14 @@ export default function Quiz() {
       });
     }
   }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, isNightTheme ? 'night' : 'light');
+    } catch {
+      // Theme persistence is optional.
+    }
+  }, [isNightTheme]);
 
   const clearCountdownTimer = useCallback(() => {
     if (countdownIntervalRef.current) {
@@ -414,58 +444,107 @@ export default function Quiz() {
   const releaseYear = currentMovie?.release_date ? new Date(currentMovie.release_date).getFullYear() : null;
   const isCorrectAnswer = message.includes('Correct');
   const trailerEmbedUrl = currentMovie?.trailer_url?.replace('watch?v=', 'embed/');
+  const themeToggleLabel = isNightTheme ? 'Switch to light theme' : 'Switch to night theme';
+  const themeToggleIcon = isNightTheme ? (
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2" />
+      <path d="M12 20v2" />
+      <path d="m4.93 4.93 1.41 1.41" />
+      <path d="m17.66 17.66 1.41 1.41" />
+      <path d="M2 12h2" />
+      <path d="M20 12h2" />
+      <path d="m6.34 17.66-1.41 1.41" />
+      <path d="m19.07 4.93-1.41 1.41" />
+    </svg>
+  ) : (
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.99 13.34A8 8 0 1 1 10.66 3.01 6.5 6.5 0 0 0 20.99 13.34Z" />
+    </svg>
+  );
+  const themeToggleButton = (
+    <button
+      onClick={() => setIsNightTheme((theme) => !theme)}
+      aria-label={themeToggleLabel}
+      title={themeToggleLabel}
+      className={`${isNightTheme ? 'bg-white/10 text-white hover:bg-white/15 focus:ring-amber-200/30' : 'bg-slate-950/10 text-slate-950 hover:bg-slate-950/15 focus:ring-slate-950/20'} flex h-11 w-11 shrink-0 items-center justify-center rounded-full backdrop-blur transition-all duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4`}
+    >
+      {themeToggleIcon}
+    </button>
+  );
 
   if (!hasStarted) {
     return (
-      <main className="relative min-h-screen overflow-hidden bg-sky-400 text-white">
-        <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(17,16,15,0.96)_0%,rgba(33,28,24,0.88)_48%,rgba(92,25,20,0.76)_100%)]" />
-        <div className="intro-film-strip absolute inset-x-0 top-0 h-20 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.14)_0_14px,transparent_14px_28px)] opacity-25" />
-        <div className="intro-film-strip-reverse absolute inset-x-0 bottom-0 h-20 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.12)_0_14px,transparent_14px_28px)] opacity-20" />
-        <div className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-between px-5 py-8 sm:px-8 sm:py-10">
+      <main className={`${isNightTheme ? 'bg-[#11100f] text-white' : 'bg-slate-100 text-slate-950'} relative min-h-screen overflow-hidden`}>
+        <div className={`${isNightTheme ? 'bg-[#11100f]' : 'bg-[radial-gradient(circle_at_26%_38%,#ffffff_0%,#f1f5f9_48%,#dbe3ee_100%)]'} absolute inset-0`} />
+        <div className="intro-poster-wall absolute -inset-x-12 -inset-y-16 grid grid-cols-4 gap-3 opacity-55 blur-[1px] sm:-inset-x-20 sm:-inset-y-24 sm:grid-cols-6 sm:gap-4 lg:hidden">
+          {INTRO_POSTERS.map((src, index) => (
+            <div
+              key={`${src}-${index}`}
+              className="intro-poster-tile relative aspect-[2/3] overflow-hidden rounded-[5px] bg-white/5 shadow-[0_22px_55px_rgba(0,0,0,0.5)]"
+              style={{
+                '--poster-y': index % 2 === 0 ? '22px' : '-12px',
+                '--poster-r': index % 3 === 0 ? '-2deg' : '1deg',
+                '--poster-drift': `${index % 4 === 0 ? -38 : 30}px`,
+                '--poster-delay': `${index * -240}ms`,
+              } as React.CSSProperties}
+            >
+              <Image
+                src={src}
+                alt=""
+                fill
+                priority={index < 8}
+                className="intro-poster-image object-cover"
+                sizes="(max-width: 640px) 28vw, (max-width: 1024px) 18vw, 150px"
+              />
+            </div>
+          ))}
+        </div>
+        <div className="intro-feature-posters absolute inset-0 hidden lg:block">
+          {INTRO_POSTERS.slice(0, 6).map((src, index) => (
+            <div key={src} className={`intro-feature-poster intro-feature-poster-${index + 1}`}>
+              <Image
+                src={src}
+                alt=""
+                fill
+                priority={index < 3}
+                className="object-cover"
+                sizes="360px"
+              />
+            </div>
+          ))}
+        </div>
+        <div className={`${isNightTheme ? 'intro-home-shade' : 'intro-home-shade-light'} absolute inset-0`} />
+        <div className={`${isNightTheme ? 'bg-[radial-gradient(circle_at_28%_48%,rgba(255,255,255,0.1)_0%,rgba(17,16,15,0.3)_34%,rgba(17,16,15,0.92)_78%)]' : 'bg-[radial-gradient(circle_at_28%_48%,rgba(255,255,255,0.08)_0%,rgba(248,250,252,0.07)_42%,rgba(226,232,240,0.04)_88%)]'} absolute inset-0`} />
+
+        <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-between px-5 py-7 sm:px-8 sm:py-10">
+          <div className="absolute right-5 top-7 z-20 sm:right-8 sm:top-10">
+            {themeToggleButton}
+          </div>
           <header className="intro-fade-down flex items-center justify-center gap-3 sm:justify-start">
-            <span className="text-2xl font-extrabold tracking-tight sm:text-3xl">Guess</span>
-            <Image src="/logo.png" alt="Logo" width={68} height={68} className="h-14 w-14 sm:h-16 sm:w-16" priority />
-            <span className="text-2xl font-extrabold tracking-tight sm:text-3xl">Movie</span>
+            <span className="text-2xl font-black tracking-tight sm:text-3xl">Guess</span>
+            <Image src="/logo.png" alt="Logo" width={68} height={68} className="h-14 w-14 drop-shadow-2xl sm:h-16 sm:w-16" priority />
+            <span className="text-2xl font-black tracking-tight sm:text-3xl">Movie</span>
           </header>
 
-          <section className="flex flex-1 flex-col items-center justify-center py-10 text-center sm:items-start sm:text-left">
-            <p className="intro-fade-up mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-amber-200">movie quiz</p>
-            <h1 className="intro-fade-up max-w-3xl text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl" style={{ animationDelay: '90ms' }}>
-              Guess the movie from stills and cast hints
+          <section className="flex flex-1 flex-col items-center justify-center pb-16 pt-10 text-center sm:items-start sm:pb-20 sm:text-left">
+            <p className={`${isNightTheme ? 'text-amber-200/90' : 'text-amber-700'} intro-fade-up mb-5 text-xs font-bold uppercase tracking-[0.28em] sm:text-sm`}>cinema quiz</p>
+            <h1 className={`${isNightTheme ? 'text-white' : 'text-slate-950'} intro-fade-up max-w-4xl text-5xl font-black leading-[0.98] tracking-tight sm:text-7xl lg:text-8xl`} style={{ animationDelay: '90ms' }}>
+              Guess the movie
             </h1>
-
-            <div className="mt-8 grid w-full max-w-4xl grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-4 sm:gap-4">
-              {INTRO_IMAGES.map((src, index) => (
-                <div
-                  key={src}
-                  className="intro-float-card intro-card-motion relative aspect-[4/3] overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.48)] [--intro-delay:220ms] sm:[--intro-rotate:-2deg]"
-                  style={{
-                    '--intro-delay': `${160 + index * 110}ms`,
-                    '--intro-rotate': `${index % 2 === 0 ? -2 : 2}deg`,
-                  } as React.CSSProperties}
-                >
-                  <Image
-                    src={src}
-                    alt=""
-                    fill
-                    priority={index === 0}
-                    className="intro-image-zoom object-cover"
-                    sizes="(max-width: 640px) 50vw, 240px"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-white/10" />
-                </div>
-              ))}
-            </div>
+            <p className={`${isNightTheme ? 'text-white/72' : 'text-slate-700'} intro-fade-up mt-5 max-w-2xl text-base font-medium leading-7 sm:text-xl sm:leading-8`} style={{ animationDelay: '180ms' }}>
+              Read the frame, spot the cast, and choose the title before the next hint gives it away.
+            </p>
 
             <button
               onClick={handleStartGame}
-              className="intro-button-motion mt-9 inline-flex min-h-12 items-center justify-center rounded-full bg-amber-300 px-8 py-3 text-base font-bold text-gray-950 transition-all duration-300 hover:-translate-y-0.5 hover:bg-amber-200 focus:outline-none focus:ring-4 focus:ring-amber-200/40"
+              className="intro-button-motion mt-9 inline-flex min-h-12 items-center justify-center rounded-full bg-amber-300 px-8 py-3 text-base font-black text-gray-950 shadow-[0_22px_60px_rgba(251,191,36,0.28)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-amber-200 focus:outline-none focus:ring-4 focus:ring-amber-200/40"
             >
               Start game
             </button>
           </section>
 
-          <footer className="text-center text-xs text-white/45 sm:text-left">
+          <footer className={`${isNightTheme ? 'text-white/45' : 'text-slate-500'} intro-fade-up text-center text-xs font-medium sm:text-left`}>
             Stills, cast data, and trailers are powered by TMDB.
           </footer>
         </div>
@@ -474,39 +553,44 @@ export default function Quiz() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-start items-center bg-gradient-to-r from-gray-50 via-gray-200 to-gray-50 px-0 py-3 sm:justify-center sm:px-4 sm:py-8">
-      <button
-        onClick={handleHomeClick}
-        className="mb-4 flex items-center justify-center gap-3 text-center text-2xl font-extrabold text-gray-900 tracking-tight transition-opacity hover:opacity-75 focus:outline-none focus:ring-4 focus:ring-black/10 sm:mb-8 sm:text-3xl"
-        aria-label="Go to home screen"
-      >
-        <span>Guess</span>
-        <Image src="/logo.png" alt="Logo" width={52} height={52} className="h-11 w-11 sm:h-16 sm:w-16" />
-        <span>Movie</span>
-      </button>
+    <div className={`${isNightTheme ? 'bg-[radial-gradient(circle_at_top,rgba(37,41,72,0.85)_0%,rgba(10,12,22,0.98)_44%,rgba(3,5,12,1)_100%)] text-slate-100' : 'bg-gradient-to-r from-slate-50 via-slate-200 to-slate-50 text-slate-950'} min-h-screen flex flex-col justify-start items-center px-0 py-3 sm:justify-center sm:px-4 sm:py-8`}>
+      <div className="relative mb-4 flex w-full max-w-4xl items-center justify-center px-4 sm:mb-8">
+        <button
+          onClick={handleHomeClick}
+          className={`${isNightTheme ? 'text-white focus:ring-amber-200/20' : 'text-slate-950 focus:ring-slate-950/10'} flex items-center justify-center gap-3 text-center text-2xl font-extrabold tracking-tight transition-opacity hover:opacity-75 focus:outline-none focus:ring-4 sm:text-3xl`}
+          aria-label="Go to home screen"
+        >
+          <span>Guess</span>
+          <Image src="/logo.png" alt="Logo" width={52} height={52} className="h-11 w-11 sm:h-16 sm:w-16" />
+          <span>Movie</span>
+        </button>
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+          {themeToggleButton}
+        </div>
+      </div>
 
       {error && <p className="text-red-500 text-2xl">{error}</p>}
 
       {countdown !== null && (
         <div className="flex flex-1 flex-col items-center justify-center px-4 text-center">
-          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-gray-500">Get ready</p>
+          <p className={`${isNightTheme ? 'text-amber-200/70' : 'text-slate-500'} mb-4 text-sm font-semibold uppercase tracking-[0.2em]`}>Get ready</p>
           <div
             key={countdown}
-            className="modal-panel-in flex h-32 w-32 items-center justify-center rounded-full bg-yellow-400 text-6xl font-extrabold text-black shadow-2xl sm:h-40 sm:w-40 sm:text-7xl"
+            className="modal-panel-in flex h-32 w-32 items-center justify-center rounded-full bg-amber-300 text-6xl font-extrabold text-slate-950 shadow-[0_24px_80px_rgba(251,191,36,0.28)] sm:h-40 sm:w-40 sm:text-7xl"
           >
             {countdown}
           </div>
         </div>
       )}
 
-      {loading && countdown === null && <p className="text-2xl font-semibold mt-4">Loading...</p>}
+      {loading && countdown === null && <p className={`${isNightTheme ? 'text-slate-200' : 'text-slate-700'} text-2xl font-semibold mt-4`}>Loading...</p>}
 
       {!loading && countdown === null && currentMovie && (
         <>
           {visibleBackdrop && (
             <div className="mb-4 w-full sm:mb-8 sm:max-w-4xl">
               <div
-                className="group relative overflow-hidden shadow-lg cursor-pointer sm:mx-4 sm:rounded-lg"
+                className="group relative overflow-hidden shadow-[0_28px_90px_rgba(0,0,0,0.55)] cursor-pointer sm:mx-4 sm:rounded-lg"
               >
                 <Image
                   src={visibleBackdrop}
@@ -524,7 +608,7 @@ export default function Quiz() {
               <button
                 key={option.id}
                 onClick={() => handleAnswerClick(option)}
-                className="min-h-11 w-full rounded-xl bg-gradient-to-r from-gray-900 to-black px-3 py-2 text-center text-sm font-semibold leading-tight text-white shadow-lg transition-all duration-300 hover:bg-gray-800 sm:rounded-3xl sm:px-6 sm:py-3 sm:text-lg sm:shadow-xl md:mx-4"
+                className={`${isNightTheme ? 'bg-slate-800 text-white shadow-black/60 hover:bg-slate-700 hover:shadow-amber-950/40' : 'bg-white text-slate-950 shadow-slate-300/70 hover:bg-slate-50'} min-h-11 w-full rounded-xl px-3 py-2 text-center text-sm font-bold leading-tight shadow-lg transition-all duration-300 hover:-translate-y-0.5 sm:rounded-3xl sm:px-6 sm:py-3 sm:text-lg sm:shadow-xl md:mx-4`}
               >
                 {option.title}
               </button>
@@ -533,7 +617,7 @@ export default function Quiz() {
 
           {visibleActor && (
             <div className="mb-4 flex flex-col items-center px-4 text-center sm:mb-12">
-              <div className="relative h-24 w-24 overflow-hidden rounded-full shadow-lg sm:h-36 sm:w-36">
+              <div className="relative h-24 w-24 overflow-hidden rounded-full shadow-lg shadow-black/50 sm:h-36 sm:w-36">
                 <Image
                   src={visibleActor.profile_path}
                   alt={visibleActor.name}
@@ -542,8 +626,8 @@ export default function Quiz() {
                   sizes="(max-width: 640px) 96px, 144px"
                 />
               </div>
-              <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-gray-500 sm:text-sm">Cast hint</p>
-              <p className="mt-1 text-base font-bold text-gray-900 sm:text-xl">{visibleActor.name}</p>
+              <p className={`${isNightTheme ? 'text-amber-200/60' : 'text-slate-500'} mt-3 text-xs font-semibold uppercase tracking-wide sm:text-sm`}>Cast hint</p>
+              <p className={`${isNightTheme ? 'text-white' : 'text-slate-950'} mt-1 text-base font-bold sm:text-xl`}>{visibleActor.name}</p>
             </div>
           )}
         </>
@@ -551,11 +635,11 @@ export default function Quiz() {
 
       {pendingHintStep !== null && (
         <div className={`${isHintClosing ? 'modal-overlay-out' : 'modal-overlay-in'} fixed inset-0 z-40 flex items-center justify-center bg-black/45 p-4`}>
-          <div className={`${isHintClosing ? 'modal-panel-out' : 'modal-panel-in'} w-full max-w-sm rounded-2xl bg-amber-100 px-6 py-6 text-center shadow-2xl`}>
-            <p className="mb-5 text-base leading-relaxed text-black sm:text-lg">Not quite. Try once more with a new hint.</p>
+          <div className={`${isHintClosing ? 'modal-panel-out' : 'modal-panel-in'} w-full max-w-sm rounded-2xl bg-slate-950 px-6 py-6 text-center shadow-2xl shadow-black/60`}>
+            <p className="mb-5 text-base leading-relaxed text-slate-100 sm:text-lg">Not quite. Try once more with a new hint.</p>
             <button
               onClick={handleHintModalClose}
-              className="min-h-11 rounded-full bg-gray-950 px-6 py-2 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-black hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-black/10"
+              className="min-h-11 rounded-full bg-amber-300 px-6 py-2 text-sm font-bold text-slate-950 shadow-lg shadow-amber-950/30 transition-all duration-300 hover:-translate-y-0.5 hover:bg-amber-200 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-amber-200/30"
             >
               Show new hint
             </button>
@@ -565,7 +649,7 @@ export default function Quiz() {
 
       {showModal && currentMovie && (
         <div className="modal-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 sm:p-6">
-          <div ref={resultModalRef} className="modal-panel-in flex max-h-[94vh] w-full max-w-md flex-col overflow-y-auto rounded-2xl bg-white text-center shadow-2xl sm:max-w-2xl lg:max-w-4xl lg:flex-row lg:overflow-hidden lg:text-left">
+          <div ref={resultModalRef} className={`${isNightTheme ? 'bg-slate-950 text-slate-100 shadow-black/70' : 'bg-white text-slate-950 shadow-slate-950/20'} modal-panel-in flex max-h-[94vh] w-full max-w-md flex-col overflow-y-auto rounded-2xl text-center shadow-2xl sm:max-w-2xl lg:max-w-4xl lg:flex-row lg:overflow-hidden lg:text-left`}>
             <div className="relative aspect-[2/3] w-full shrink-0 overflow-hidden lg:h-auto lg:w-[420px]">
               <Image
                 src={`https://image.tmdb.org/t/p/w500${currentMovie.poster_path}`}
@@ -574,12 +658,12 @@ export default function Quiz() {
                 fill
                 sizes="(max-width: 1024px) 100vw, 420px"
               />
-              <div className="absolute right-3 top-3 z-10 flex gap-2 sm:right-4 sm:top-4">
+              <div className="absolute right-3 top-3 z-10 flex gap-2 sm:right-4 sm:top-4 lg:hidden">
                 <button
                   onClick={handleModalClose}
                   aria-label="Next movie"
                   title="Next movie"
-                  className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-gray-950 shadow-lg backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-white/40"
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-950/85 text-white shadow-lg backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:bg-slate-900 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-white/30"
                 >
                   <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M18 6 6 18" />
@@ -589,8 +673,19 @@ export default function Quiz() {
               </div>
             </div>
 
-            <div ref={resultDetailsRef} className="flex flex-1 flex-col items-center justify-start px-5 py-5 sm:px-8 sm:py-8 lg:min-h-0 lg:items-start lg:justify-center lg:overflow-y-auto lg:px-10">
-              <div className={`${isCorrectAnswer ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900'} mb-3 inline-flex items-center gap-2 rounded-full px-4 py-2 text-base font-semibold sm:text-lg`}>
+            <div ref={resultDetailsRef} className="relative flex flex-1 flex-col items-center justify-start px-5 py-5 sm:px-8 sm:py-8 lg:min-h-0 lg:items-start lg:justify-center lg:overflow-y-auto lg:px-10">
+              <button
+                onClick={handleModalClose}
+                aria-label="Next movie"
+                title="Next movie"
+                className={`${isNightTheme ? 'bg-white/10 text-white hover:bg-white/15 focus:ring-white/20' : 'bg-slate-100 text-slate-950 hover:bg-slate-200 focus:ring-slate-950/10'} absolute right-4 top-4 hidden h-10 w-10 items-center justify-center rounded-full transition-all duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4 lg:flex`}
+              >
+                <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+              <div className={`${isCorrectAnswer ? (isNightTheme ? 'bg-emerald-400/10 text-emerald-100' : 'bg-emerald-50 text-emerald-800') : (isNightTheme ? 'bg-rose-400/10 text-rose-100' : 'bg-rose-50 text-rose-800')} mb-3 inline-flex items-center gap-2 rounded-full px-4 py-2 text-base font-semibold sm:text-lg`}>
                 <span className={`${isCorrectAnswer ? 'bg-emerald-600' : 'bg-rose-600'} flex h-7 w-7 items-center justify-center rounded-full text-white`}>
                   {isCorrectAnswer ? (
                     <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -606,7 +701,7 @@ export default function Quiz() {
                 <span>{isCorrectAnswer ? 'Correct' : 'Incorrect'}</span>
               </div>
               <div className="mb-4 flex items-center justify-center gap-3 lg:justify-start">
-                <p className="text-xl font-semibold text-gray-900 sm:text-2xl">
+                <p className={`${isNightTheme ? 'text-white' : 'text-slate-950'} text-xl font-semibold sm:text-2xl`}>
                   {currentMovie.title}{releaseYear ? ` (${releaseYear})` : ''}
                 </p>
 
@@ -615,7 +710,7 @@ export default function Quiz() {
                     onClick={() => setShowTrailerModal(true)}
                     aria-label="Open trailer"
                     title="Open trailer"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-950 transition-all duration-300 hover:-translate-y-0.5 hover:bg-gray-200 focus:outline-none focus:ring-4 focus:ring-black/10"
+                    className={`${isNightTheme ? 'bg-white/10 text-white hover:bg-white/15 focus:ring-white/20' : 'bg-slate-100 text-slate-950 hover:bg-slate-200 focus:ring-slate-950/10'} flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-4`}
                   >
                     <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M21.58 7.19a2.58 2.58 0 0 0-1.82-1.83C18.16 4.93 12 4.93 12 4.93s-6.16 0-7.76.43a2.58 2.58 0 0 0-1.82 1.83C2 8.8 2 12 2 12s0 3.2.42 4.81a2.58 2.58 0 0 0 1.82 1.83c1.6.43 7.76.43 7.76.43s6.16 0 7.76-.43a2.58 2.58 0 0 0 1.82-1.83C22 15.2 22 12 22 12s0-3.2-.42-4.81ZM10 15.07V8.93L15.2 12 10 15.07Z" />
@@ -626,20 +721,20 @@ export default function Quiz() {
 
               <div className="mb-5 w-full max-w-xl space-y-2">
                 {currentMovie.overview && (
-                  <details onToggle={handleDescriptionToggle} className="group rounded-xl bg-gray-50 px-4 py-3 text-left">
-                    <summary className="cursor-pointer list-none text-sm font-semibold text-gray-950 sm:text-base">
+                  <details onToggle={handleDescriptionToggle} className={`${isNightTheme ? 'bg-white/5' : 'bg-slate-50'} group rounded-xl px-4 py-3 text-left`}>
+                    <summary className={`${isNightTheme ? 'text-white' : 'text-slate-950'} cursor-pointer list-none text-sm font-semibold sm:text-base`}>
                       <span className="inline-flex w-full items-center justify-between gap-4">
                         Description
                         <span className="text-lg leading-none transition-transform duration-200 group-open:rotate-45">+</span>
                       </span>
                     </summary>
-                    <p className="mt-3 text-sm leading-relaxed text-gray-700 sm:text-base">{currentMovie.overview}</p>
+                    <p className={`${isNightTheme ? 'text-slate-300' : 'text-slate-700'} mt-3 text-sm leading-relaxed sm:text-base`}>{currentMovie.overview}</p>
                   </details>
                 )}
 
               </div>
 
-              {rewardMessage && <div className="mb-5 rounded-lg bg-yellow-100 p-4 text-lg text-yellow-900">{rewardMessage}</div>}
+              {rewardMessage && <div className={`${isNightTheme ? 'bg-amber-300/10 text-amber-100' : 'bg-amber-50 text-amber-900'} mb-5 rounded-lg p-4 text-lg`}>{rewardMessage}</div>}
 
             </div>
           </div>
